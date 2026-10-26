@@ -1,0 +1,30 @@
+name: Build PrivacyControls Rain bundle
+
+on:
+  push:
+    branches:
+      - feature/hide-avatars-and-names
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build Rain JavaScript and Hermes bundle
+        run: node scripts/build.mjs --build-bytecode
+      - name: Upload bundled files
+        uses: actions/upload-artifact@v4
+        with:
+          name: rain-privacycontrols-bundle
+          path: dist/
+          if-no-files-found: error

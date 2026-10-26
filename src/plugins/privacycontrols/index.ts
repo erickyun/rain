@@ -1,6 +1,6 @@
 import { after } from "@api/patcher";
 import { waitForHydration } from "@api/storage";
-import { findByFilePath, findByName, findByProps } from "@metro";
+import { findByFilePath, findByName, findByProps, findByStoreName } from "@metro";
 import { UserStore } from "@metro/common/stores";
 import { definePlugin } from "@plugins";
 import React from "react";
@@ -138,34 +138,26 @@ function installAvatarHooks() {
     }
 }
 
-function withUser(args: any[]): boolean {
-    // Limit shared name resolver patches to calls involving a user, never
-    // arbitrary text or channel/server names.
-    return args.some(value => value && typeof value === "object" &&
-        typeof value.id === "string" &&
-        (typeof value.username === "string" || "globalName" in value || "global_name" in value));
-}
-
 function installNameHooks() {
     // Discord's UserUtils exports these together. Do not patch random unrelated
     // modules which happen to export a generic function called getName.
     const utils = findByProps("getName", "nameFromUser", "getUserTag");
     for (const key of ["getName", "useName", "nameFromUser", "getGlobalName", "getFormattedName"]) {
         hook(utils, key, (args, result) =>
-            settings().hideDisplayName && withUser(args) && typeof result === "string"
+            settings().hideDisplayName && typeof result === "string"
                 ? BLANK_TEXT : result
         );
     }
     for (const key of ["getUserTag", "useUserTag"]) {
         hook(utils, key, (args, result) =>
-            settings().hideUsername && withUser(args) && typeof result === "string"
+            settings().hideUsername && typeof result === "string"
                 ? BLANK_TEXT : result
         );
     }
 
     // Nicknames in DM headers may bypass UserUtils and come directly from
     // RelationshipStore. Do not affect any unrelated store methods.
-    const RelationshipStore = findByName("RelationshipStore") ?? undefined;
+    const RelationshipStore = findByStoreName("RelationshipStore");
     if (RelationshipStore?.getNickname) {
         hook(RelationshipStore, "getNickname", (args, result) =>
             settings().hideDisplayName &&
